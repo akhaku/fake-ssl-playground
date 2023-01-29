@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 const bytesToNumber = bytes => {
   let num = 0;
   for (let i = 0; i < bytes.length; i++) {
@@ -21,4 +23,13 @@ const numberToBytes = (num, numBytes) => {
   }
   return ret;
 };
-module.exports = {bytesToNumber, numberToBytes};
+
+const randomBytes = () => {
+  const ret = [];
+  const bytes = crypto.randomBytes(32);
+  for (let i = 0; i < bytes.length; i++) {
+    ret.push(bytes[i]);
+  }
+  return ret;
+};
+module.exports = {bytesToNumber, numberToBytes, randomBytes};

@@ -15,7 +15,9 @@ const RecordType = {
 };
 
 class TlsRecord {
-  constructor(recordType, recordVersion, message) {
+  static SIZE_HEADER = 5;
+
+  static create(recordType, recordVersion, message) {
     const length = message.getByteArray().length;
     if (length > 16384) {
       throw new Error('Cannot have Tls record of over 16KiB');
@@ -23,7 +25,25 @@ class TlsRecord {
     const lengthAsTwoBytes = numberToBytes(length, 2);
     // 5 byte header: record type, 2 * TLS version, 2 * length
     const header = [recordType, recordVersion[0], recordVersion[1], ...lengthAsTwoBytes];
-    this.byteArray = [...header, ...message.getByteArray()];
+    if (header.length !== TlsRecord.SIZE_HEADER) {
+      throw new Error(`Unexpected header length ${header.length}`);
+    }
+    return new TlsRecord([...header, ...message.getByteArray()]);
+  }
+
+  constructor(byteArray) {
+    this.byteArray = byteArray;
+  }
+
+  getMessage() {
+    const messageLength = getLength();
+    const messageBytes = this.byteArray.slice(TlsRecord.SIZE_HEADER, messageLength + 1);
+    switch (getRecordType()) {
+      case RecordType.HANDSHAKE:
+        return new HandshakeMessage(messageBytes);
+      default:
+        throw new Error(`Record type ${getRecordType()} not yet implemented`);
+    }
   }
 
   getRecordType() {
@@ -57,12 +77,32 @@ const HandshakeType = {
 };
 
 class HandshakeMessage {
-  constructor(handshakeType, message) {
+  static SIZE_HEADER = 4;
+
+  static create(handshakeType, message) {
     const length = message.getByteArray().length;
     const lengthAsThreeBytes = numberToBytes(length, 3);
     // 4 byte header: record type, 3 * length
     const header = [handshakeType, ...lengthAsThreeBytes];
-    this.byteArray = [...header, ...message.getByteArray()];
+    if (header.length !== HandshakeMessage.SIZE_HEADER) {
+      throw new Error(`Unexpected header length ${header.length}`);
+    }
+    return new HandshakeMessage([...header, ...message.getByteArray()]);
+  }
+
+  constructor(byteArray) {
+    this.byteArray = byteArray;
+  }
+
+  getMessage() {
+    const messageLength = getLength();
+    const messageBytes = this.byteArray.slice(HandshakeMessage.SIZE_HEADER, messageLength + 1);
+    switch (getHandshakeType()) {
+      case HandshakeType.CLIENT_HELLO:
+        return new ClientHello(messageBytes);
+      default:
+        throw new Error(`HandshakeType ${getHandshakeType()} not yet implemented`);
+    }
   }
 
   getHandshakeType() {
@@ -72,10 +112,14 @@ class HandshakeMessage {
   getLength() {
     return bytesToNumber(this.byteArray.slice(1, 4));
   }
+
+  getByteArray() {
+    return this.byteArray;
+  }
 }
 
 class CipherSuites {
-  constructor(cipherIds) { // list of cipher IDs
+  static create(cipherIds) { // list of cipher IDs
     const length = cipherIds.length * 2;
     const lengthArray = numberToBytes(length, 2);
     let cipherIdsArray = [];
@@ -85,7 +129,11 @@ class CipherSuites {
     if (length !== cipherIdsArray.length) {
       throw new Error('Unexpected exception with cipher suites');
     }
-    this.byteArray = [...lengthArray, ...cipherIdsArray];
+    return new CipherSuites([...lengthArray, ...cipherIdsArray]);
+  }
+
+  constructor(byteArray) {
+    this.byteArray = byteArray;
   }
 
   getCipherIds() {
@@ -109,7 +157,7 @@ class CipherSuites {
 }
 
 class Extensions {
-  constructor(extensions) { // list of {id: id, data: [data]}
+  static create(extensions) { // list of {id: id, data: [data]}
     const length = extensions.reduce((acc, curr) => {
       const idLength = 2;
       const dataLengthLength = 2;
@@ -128,7 +176,11 @@ class Extensions {
     if (length != extensionsArray.length) {
       throw new Error('Unexpected exception with extensions');
     }
-    this.byteArray = [...lengthArray, ...extensionsArray];
+    return new Extensions([...lengthArray, ...extensionsArray]);
+  }
+
+  constructor(byteArray) {
+    this.byteArray = byteArray;
   }
 
   getExtensions() {
@@ -139,10 +191,8 @@ class Extensions {
       const id = bytesToNumber(this.byteArray.slice(currentIndex, currentIndex + 2));
       currentIndex += 2;
       const dataLength = bytesToNumber(this.byteArray.slice(currentIndex, currentIndex + 2));
-      console.log(`dataLength: ${dataLength}`);
       currentIndex += 2;
       const data = this.byteArray.slice(currentIndex, currentIndex + dataLength);
-      console.log(`slices: ${data}`);
       currentIndex += dataLength;
       ret.push({id, data});
     }
@@ -159,7 +209,7 @@ class Extensions {
 }
 
 class ClientHello {
-  constructor(recordVersion, randomBytes, sessionId, cipherSuites, compressionMethods, extensions) {
+  static create(recordVersion, randomBytes, sessionId, cipherSuites, compressionMethods, extensions) {
     if (randomBytes.length != 32) {
       throw new Error('Random bytes must be of length 32');
     }
@@ -167,17 +217,21 @@ class ClientHello {
     if (sessionId.length !== 0) {
       throw new Error('Non-empty session IDs currently unsupported');
     }
-    if (compressionMethods !== [0, 1, 0]) {
+    if (compressionMethods.toString() !== [0, 1, 0].toString()) {
       throw new Error('Non-empty compression currently unsupported');
     }
     const sessionIdAsArray = [0];
-    this.byteArray = [
+    return new ClientHello([
       ...recordVersion,
       ...randomBytes,
       ...sessionIdAsArray,
       ...cipherSuites.getByteArray(),
       ...extensions.getByteArray(),
-    ];
+    ]);
+  }
+
+  constructor(byteArray) {
+    this.byteArray = byteArray;
   }
 
   getByteArray() {
@@ -187,8 +241,10 @@ class ClientHello {
 
 module.exports = {
   CipherSuites,
+  ClientHello,
   Extensions,
   HandshakeMessage,
+  HandshakeType,
   RecordType,
   RecordVersion,
   TlsRecord,
