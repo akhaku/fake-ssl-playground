@@ -1,5 +1,5 @@
 {
-  "name": "fake-ssl-playground",
+  "name": "fake-tls-playground",
   "version": "1.0.0",
   "description": "Playground",
   "main": "index.js",
