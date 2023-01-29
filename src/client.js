@@ -1,10 +1,11 @@
 const http = require('http');
+const {createClientHello} = require('./tls-handler');
 
 const req = http.request({
-  host: '127.0.0.1',
+  host: 'localhost',
   port: 8000,
   method: 'POST',
-  path: '/ClientHello',
+  path: '/ClientHello?foo',
 }, res => {
   const status = res.statusCode;
   if (status !== 200) {
@@ -19,5 +20,5 @@ const req = http.request({
   });
 });
 
-req.write(new ClientHello().getByteArray());
+req.write(createClientHello().getByteArray());
 req.end();
