@@ -32,7 +32,7 @@ class TlsRecord {
   }
 
   constructor(byteArray) {
-    this.byteArray = byteArray;
+    this.byteArray = new Uint8Array(byteArray);
   }
 
   getMessage() {
@@ -91,7 +91,7 @@ class HandshakeMessage {
   }
 
   constructor(byteArray) {
-    this.byteArray = byteArray;
+    this.byteArray = new Uint8Array(byteArray);
   }
 
   getMessage() {
@@ -133,7 +133,7 @@ class CipherSuites {
   }
 
   constructor(byteArray) {
-    this.byteArray = byteArray;
+    this.byteArray = new Uint8Array(byteArray);
   }
 
   getCipherIds() {
@@ -180,7 +180,7 @@ class Extensions {
   }
 
   constructor(byteArray) {
-    this.byteArray = byteArray;
+    this.byteArray = new Uint8Array(byteArray);
   }
 
   getExtensions() {
@@ -194,7 +194,7 @@ class Extensions {
       currentIndex += 2;
       const data = this.byteArray.slice(currentIndex, currentIndex + dataLength);
       currentIndex += dataLength;
-      ret.push({id, data});
+      ret.push({id, data: Array.from(data)});
     }
     return ret;
   }
@@ -231,7 +231,7 @@ class ClientHello {
   }
 
   constructor(byteArray) {
-    this.byteArray = byteArray;
+    this.byteArray = new Uint8Array(byteArray);
   }
 
   getByteArray() {
