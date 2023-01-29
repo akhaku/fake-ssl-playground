@@ -1,6 +1,11 @@
 const http = require('http');
 
-http.get('http://localhost:8000/', res => {
+const req = http.request({
+  host: '127.0.0.1',
+  port: 8000,
+  method: 'POST',
+  path: '/ClientHello',
+}, res => {
   const status = res.statusCode;
   if (status !== 200) {
     console.warn(`Error ${status}`);
@@ -13,3 +18,6 @@ http.get('http://localhost:8000/', res => {
     console.log(body);
   });
 });
+
+req.write(new ClientHello().getByteArray());
+req.end();
